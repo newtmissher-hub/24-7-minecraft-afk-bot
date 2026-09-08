@@ -24,6 +24,7 @@ let botState = {
   startTime: Date.now(),
   errors: [],
   wasThrottled: false,
+  wasBanned: false,
 };
 
 // Health check endpoint for monitoring
@@ -36,14 +37,31 @@ app.get('/', (req, res) => {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" media="print" onload="this.media='all'"
-              href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+              href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap">
         <style>
+          :root {
+            --void: #12140f;
+            --panel: #1b2016;
+            --edge-lo: #333c28;
+            --edge-hi: #4c5a3c;
+            --edge-shadow: #050603;
+            --grass: #7cb143;
+            --grass-dim: #3f5a26;
+            --redstone: #c1432f;
+            --redstone-dim: #5c2119;
+            --parchment: #e9e0c9;
+            --muted: #8a8878;
+          }
+
           *, *::before, *::after { box-sizing: border-box; }
 
           body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background: #0d1117;
-            color: #e6edf3;
+            font-family: 'VT323', monospace;
+            font-size: 19px;
+            background: var(--void);
+            background-image:
+              repeating-linear-gradient(45deg, #171a12 0 3px, transparent 3px 6px);
+            color: var(--parchment);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -52,99 +70,124 @@ app.get('/', (req, res) => {
             padding: 24px;
           }
 
-          main { width: 100%; max-width: 400px; }
+          main { width: 100%; max-width: 380px; }
 
-          header { margin-bottom: 28px; }
-          header h1 {
-            font-size: 26px;
-            font-weight: 700;
-            color: #f0f6fc;
+          .panel {
+            background: var(--panel);
+            border-top: 3px solid var(--edge-hi);
+            border-left: 3px solid var(--edge-hi);
+            border-bottom: 3px solid var(--edge-shadow);
+            border-right: 3px solid var(--edge-shadow);
+            padding: 20px;
+            margin-bottom: 14px;
+          }
+
+          header.panel {
+            text-align: center;
+            padding: 24px 20px 20px;
+          }
+
+          .brand {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 15px;
+            color: var(--parchment);
             margin: 0;
-            line-height: 1.2;
+            line-height: 1.6;
           }
           header p {
-            font-size: 14px;
-            color: #8b949e;
-            margin: 6px 0 0;
-            line-height: 1.5;
+            font-size: 17px;
+            color: var(--muted);
+            margin: 10px 0 0;
           }
 
-          .status-section {
-            border-radius: 12px;
-            padding: 20px 24px;
-            margin-bottom: 16px;
+          .status-row {
             display: flex;
             align-items: center;
             gap: 16px;
+          }
+
+          .voxel {
+            width: 46px;
+            height: 46px;
+            flex-shrink: 0;
+            border-top: 3px solid rgba(255,255,255,0.35);
+            border-left: 3px solid rgba(255,255,255,0.35);
+            border-bottom: 3px solid rgba(0,0,0,0.45);
+            border-right: 3px solid rgba(0,0,0,0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-family: 'Press Start 2P', monospace;
             transition: background 0.3s, border-color 0.3s;
+            animation: bob 3s ease-in-out infinite;
           }
-          .status-section.online  { background: #0d2218; border: 2px solid #238636; }
-          .status-section.offline { background: #200d0d; border: 2px solid #da3633; }
+          .voxel.online  { background: var(--grass); color: var(--edge-shadow); }
+          .voxel.offline { background: var(--redstone); color: #2a0a06; animation: none; }
 
-          .status-icon {
-            width: 44px; height: 44px;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 20px; flex-shrink: 0;
-            transition: background 0.3s;
+          @keyframes bob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
           }
-          .status-icon.online  { background: #238636; }
-          .status-icon.offline { background: #da3633; }
 
-          .status-label { font-size: 18px; font-weight: 700; line-height: 1.2; transition: color 0.3s; }
-          .status-label.online  { color: #3fb950; }
-          .status-label.offline { color: #f85149; }
-          .status-detail { font-size: 13px; color: #8b949e; margin-top: 3px; }
+          .status-label { font-size: 22px; line-height: 1.2; transition: color 0.3s; }
+          .status-label.online  { color: var(--grass); }
+          .status-label.offline { color: var(--redstone); }
+          .status-detail { font-size: 16px; color: var(--muted); margin-top: 2px; }
+
+          .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 9px 0;
+            border-bottom: 1px dashed var(--edge-lo);
+          }
+          .stat-row:last-child { border-bottom: none; }
+          .stat-row dt { color: var(--muted); font-size: 16px; }
+          .stat-row dd { margin: 0; font-size: 18px; color: var(--parchment); text-align: right; }
 
           dl { margin: 0; }
-          .stat-card {
-            background: #161b22;
-            border: 1px solid #21262d;
-            border-radius: 10px;
-            padding: 16px 20px;
-            margin-bottom: 10px;
-          }
-          dt { font-size: 12px; color: #8b949e; font-weight: 600; margin-bottom: 4px; }
-          dd { margin: 0; font-size: 17px; font-weight: 600; color: #e6edf3; line-height: 1.3; }
-          .stat-detail { margin: 4px 0 0; font-size: 11px; color: #6e7681; }
 
-          .controls { margin-top: 8px; }
-          .btn-grid { display: grid; gap: 10px; margin-bottom: 10px; }
-          .btn-grid-2 { grid-template-columns: 1fr 1fr; }
+          .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 
-          .btn-primary {
-            min-height: 52px; border-radius: 10px;
-            font-size: 15px; font-weight: 700;
-            cursor: pointer; letter-spacing: 0.3px;
-            transition: opacity 0.2s, filter 0.2s;
-            font-family: inherit;
-          }
-          .btn-primary:hover  { filter: brightness(1.1); }
-          .btn-primary:active { opacity: 0.85; }
-          .btn-start { border: 2px solid #238636; background: #0d2218; color: #3fb950; }
-          .btn-stop  { border: 2px solid #da3633; background: #200d0d; color: #f85149; }
-
-          .btn-secondary {
-            min-height: 44px; border-radius: 10px;
-            border: 1px solid #21262d; background: #161b22; color: #8b949e;
-            font-size: 13px; font-weight: 500;
+          .mc-btn {
+            min-height: 46px;
+            background: #4b4a42;
+            border-top: 3px solid #6f6e63;
+            border-left: 3px solid #6f6e63;
+            border-bottom: 3px solid var(--edge-shadow);
+            border-right: 3px solid var(--edge-shadow);
+            color: var(--parchment);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-decoration: none;
-            display: flex; align-items: center; justify-content: center;
-            font-family: inherit; cursor: pointer;
-            transition: background 0.2s, color 0.2s;
+            transition: background 0.15s;
           }
-          .btn-secondary:hover { background: #21262d; color: #c9d1d9; }
+          .mc-btn:hover { background: #5a594f; }
+          .mc-btn:active {
+            border-top: 3px solid var(--edge-shadow);
+            border-left: 3px solid var(--edge-shadow);
+            border-bottom: 3px solid #6f6e63;
+            border-right: 3px solid #6f6e63;
+          }
+          .mc-btn.start { color: var(--grass); }
+          .mc-btn.stop  { color: var(--redstone); }
 
-          footer { margin-top: 20px; text-align: center; }
-          footer p { font-size: 12px; color: #484f58; margin: 0; }
+          footer { text-align: center; margin-top: 4px; }
+          footer p { font-size: 15px; color: #55533f; margin: 0; }
         </style>
       </head>
       <body>
-        <main role="main" aria-label="AFK Bot Dashboard">
+        <main role="main" aria-label="${config.name} Dashboard">
 
-          <header>
-            <h1>AFK Bot Dashboard</h1>
-            <p>Minecraft server bot &middot; Live status</p>
+          <header class="panel">
+            <p class="brand">${config.name}</p>
+            <p>Minecraft AFK dashboard</p>
           </header>
 
           <section
@@ -152,43 +195,40 @@ app.get('/', (req, res) => {
             role="status"
             aria-live="polite"
             aria-label="Bot connection status"
-            class="status-section offline"
+            class="panel status-row"
           >
-            <div id="status-icon" aria-hidden="true" class="status-icon offline">&#x2717;</div>
+            <div id="status-icon" aria-hidden="true" class="voxel offline">&#x2717;</div>
             <div>
               <div id="status-label" class="status-label offline">Connecting…</div>
               <div id="status-detail" class="status-detail">Establishing connection</div>
             </div>
           </section>
 
-          <section aria-label="Bot statistics">
+          <section class="panel" aria-label="Bot statistics">
             <dl>
-              <div class="stat-card">
+              <div class="stat-row">
                 <dt>Uptime</dt>
                 <dd id="uptime-text">—</dd>
-                <p class="stat-detail">Time since last connection</p>
               </div>
-              <div class="stat-card">
+              <div class="stat-row">
                 <dt>Coordinates</dt>
                 <dd id="coords-text">Searching…</dd>
-                <p class="stat-detail">Bot's current in-game position</p>
               </div>
-              <div class="stat-card">
-                <dt>Server address</dt>
+              <div class="stat-row">
+                <dt>Server</dt>
                 <dd>${config.server.ip}</dd>
-                <p class="stat-detail">Minecraft server hostname</p>
               </div>
             </dl>
           </section>
 
           <section class="controls" aria-label="Bot controls">
-            <div class="btn-grid btn-grid-2">
-              <button class="btn-primary btn-start" onclick="startBot()" aria-label="Start bot">Start bot</button>
-              <button class="btn-primary btn-stop" onclick="stopBot()" aria-label="Stop bot">Stop bot</button>
+            <div class="btn-grid">
+              <button class="mc-btn start" onclick="startBot()" aria-label="Start bot">Start bot</button>
+              <button class="mc-btn stop" onclick="stopBot()" aria-label="Stop bot">Stop bot</button>
             </div>
-            <div class="btn-grid btn-grid-2">
-              <a href="/tutorial" class="btn-secondary" aria-label="View setup guide">Setup guide</a>
-              <a href="/logs" class="btn-secondary" aria-label="View bot logs">View logs</a>
+            <div class="btn-grid">
+              <a href="/tutorial" class="mc-btn" aria-label="View setup guide">Setup guide</a>
+              <a href="/logs" class="mc-btn" aria-label="View bot logs">View logs</a>
             </div>
           </section>
 
@@ -219,8 +259,8 @@ app.get('/', (req, res) => {
               const label   = document.getElementById('status-label');
               const detail  = document.getElementById('status-detail');
 
-              section.className = 'status-section ' + (online ? 'online' : 'offline');
-              icon.className    = 'status-icon '    + (online ? 'online' : 'offline');
+              section.className = 'panel status-row';
+              icon.className    = 'voxel '    + (online ? 'online' : 'offline');
               icon.textContent  = online ? '✓' : '✗';
               label.className   = 'status-label '   + (online ? 'online' : 'offline');
               label.textContent = online ? 'Connected' : 'Disconnected';
@@ -1132,6 +1172,7 @@ setInterval(
 // ============================================================
 let bot = null;
 let activeIntervals = [];
+let activeTimeouts = [];
 let reconnectTimeoutId = null;
 let connectionTimeoutId = null;
 let isReconnecting = false;
@@ -1155,6 +1196,8 @@ function clearAllIntervals() {
   addLog(`[Cleanup] Clearing ${activeIntervals.length} intervals`);
   activeIntervals.forEach((id) => clearInterval(id));
   activeIntervals = [];
+  activeTimeouts.forEach((id) => clearTimeout(id));
+  activeTimeouts = [];
 }
 
 function addInterval(callback, delay) {
@@ -1163,7 +1206,33 @@ function addInterval(callback, delay) {
   return id;
 }
 
+// Recurring timer with a randomized delay each cycle instead of a fixed
+// period - avoids the perfectly-periodic pattern that bot-detection
+// heuristics key on.
+function addJitteredInterval(callback, baseDelay, jitterFraction = 0.4) {
+  function tick() {
+    const jitter = 1 + (Math.random() * 2 - 1) * jitterFraction; // e.g. 0.6x - 1.4x
+    const delay = Math.max(500, Math.round(baseDelay * jitter));
+    const id = setTimeout(() => {
+      activeTimeouts = activeTimeouts.filter((t) => t !== id);
+      callback();
+      tick();
+    }, delay);
+    activeTimeouts.push(id);
+  }
+  tick();
+}
+
 function getReconnectDelay() {
+  if (botState.wasBanned) {
+    botState.wasBanned = false;
+    const banDelay = 10 * 60000 + Math.floor(Math.random() * 5 * 60000); // 10-15 min
+    addLog(
+      `[Bot] Ban backoff - waiting ${Math.round(banDelay / 60000)}min before retrying`,
+    );
+    return banDelay;
+  }
+
   if (botState.wasThrottled) {
     botState.wasThrottled = false;
     const throttleDelay = 60000 + Math.floor(Math.random() * 60000);
@@ -1312,10 +1381,19 @@ function createBot() {
       clearAllIntervals();
 
       const reasonStr = String(kickReason).toLowerCase();
-      if (
+
+      if (reasonStr.includes("banned")) {
+        addLog(
+          "[Bot] Ban detected - backing off for several minutes instead of retrying immediately",
+        );
+        botState.wasBanned = true;
+      } else if (
         reasonStr.includes("throttl") ||
         reasonStr.includes("wait before reconnect") ||
-        reasonStr.includes("too fast")
+        reasonStr.includes("too fast") ||
+        reasonStr.includes("must wait") ||
+        reasonStr.includes("logging-in") ||
+        reasonStr.includes("logging in")
       ) {
         addLog(
           "[Bot] Throttle kick detected - will use extended reconnect delay",
@@ -1648,14 +1726,15 @@ function startCircleWalk(bot, defaultMove) {
   let angle = 0;
   let lastPathTime = 0;
 
-  addInterval(() => {
+  addJitteredInterval(() => {
     if (!bot || !botState.connected) return;
     const now = Date.now();
     if (now - lastPathTime < 2000) return;
     lastPathTime = now;
     try {
-      const x = bot.entity.position.x + Math.cos(angle) * radius;
-      const z = bot.entity.position.z + Math.sin(angle) * radius;
+      const wobble = radius * (0.85 + Math.random() * 0.3); // vary the radius slightly
+      const x = bot.entity.position.x + Math.cos(angle) * wobble;
+      const z = bot.entity.position.z + Math.sin(angle) * wobble;
       bot.pathfinder.setMovements(defaultMove);
       bot.pathfinder.setGoal(
         new GoalBlock(
@@ -1664,7 +1743,7 @@ function startCircleWalk(bot, defaultMove) {
           Math.floor(z),
         ),
       );
-      angle += Math.PI / 4;
+      angle += Math.PI / 4 + (Math.random() * 0.3 - 0.15); // uneven step size
       botState.lastActivity = Date.now();
     } catch (e) {
       addLog("[CircleWalk] Error:", e.message);
@@ -1673,7 +1752,7 @@ function startCircleWalk(bot, defaultMove) {
 }
 
 function startRandomJump(bot) {
-  addInterval(() => {
+  addJitteredInterval(() => {
     if (
       !bot ||
       !botState.connected ||
@@ -1682,10 +1761,13 @@ function startRandomJump(bot) {
       return;
     try {
       bot.setControlState("jump", true);
-      setTimeout(() => {
-        if (bot && typeof bot.setControlState === "function")
-          bot.setControlState("jump", false);
-      }, 300);
+      setTimeout(
+        () => {
+          if (bot && typeof bot.setControlState === "function")
+            bot.setControlState("jump", false);
+        },
+        250 + Math.floor(Math.random() * 150),
+      );
       botState.lastActivity = Date.now();
     } catch (e) {
       addLog("[RandomJump] Error:", e.message);
@@ -1694,7 +1776,7 @@ function startRandomJump(bot) {
 }
 
 function startLookAround(bot) {
-  addInterval(() => {
+  addJitteredInterval(() => {
     if (!bot || !botState.connected) return;
     try {
       const yaw = Math.random() * Math.PI * 2 - Math.PI;
