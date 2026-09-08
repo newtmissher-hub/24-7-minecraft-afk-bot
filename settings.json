@@ -6,8 +6,8 @@
     "type": "offline"
   },
   "server": {
-    "ip": "a7aplay.aternos.me",
-    "port": 32202,
+    "ip": "solocloud.host",
+    "port": 25565,
     "version": "1.20.1",
     "try-creative": false
   },
@@ -21,6 +21,10 @@
     "auto-auth": {
       "enabled": true,
       "password": "SoloPlayz"
+    },
+    "auto-skin": {
+      "enabled": true,
+      "url": "https://i.postimg.cc/QtZS427Y/q-Kaneki.png"
     },
     "anti-afk": {
       "enabled": true,
