@@ -1,7 +1,7 @@
 {
   "name": "Newt Bot",
   "bot-account": {
-    "username": "Newt",
+    "username": "Newt_bot",
     "password": "",
     "type": "offline"
   },
@@ -33,12 +33,10 @@
     "chat-messages": {
       "enabled": true,
       "repeat": true,
-      "repeat-delay": 120,
+      "repeat-delay": 300,
       "messages": [
         "this bot was created by Newt",
-        "I'm a slave player",
-        "Donate to me bec Im the one who created this bot",
-        "Join my Discord: https://discord.gg/xuSnARjtN3"
+        "I'm a slave player"
       ]
     },
     "chat-log": true,
