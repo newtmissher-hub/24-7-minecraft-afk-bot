@@ -1444,6 +1444,17 @@ function initializeModules(bot, mcData, defaultMove) {
     }, 10000);
   }
 
+  // ---------- AUTO SKIN ----------
+  if (config.utils["auto-skin"] && config.utils["auto-skin"].enabled) {
+    const skinUrl = config.utils["auto-skin"].url;
+    setTimeout(() => {
+      if (bot && botState.connected && skinUrl) {
+        bot.chat(`/skin set ${skinUrl}`);
+        addLog(`[Skin] Sent auto-skin command: ${skinUrl}`);
+      }
+    }, 12000); // wait a bit after login so the server has authenticated the bot first
+  }
+
   // ---------- CHAT MESSAGES ----------
   if (config.utils["chat-messages"] && config.utils["chat-messages"].enabled) {
     const messages = config.utils["chat-messages"].messages;
